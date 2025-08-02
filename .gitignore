@@ -170,4 +170,5 @@ results
 output
 *.jsonl
 
+session_cookies.json
 src/results/
