@@ -3,7 +3,6 @@ import json
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Union
 import requests
-from qwen_agent.tools.base import BaseTool, register_tool
 import os
 
 SEARCH_API_URL = os.getenv("SEARCH_API_URL")
