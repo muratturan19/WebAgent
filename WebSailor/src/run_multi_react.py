@@ -15,14 +15,17 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", type=str, default="")
     parser.add_argument("--output", type=str, default="")
-    parser.add_argument("--dataset", type=str, default="gaia", choices=["gaia", 
-                                                                        "browsecomp_zh", "browsecomp_zh_small", 
-                                                                        "browsecomp_en", "browsecomp_en_full", "browsecomp_en_small", 
-                                                                        "webwalker", 
-                                                                        "simple_qa", "simple_qa_small",
-                                                                        "time_qa",
-                                                                        "xbench-deepsearch",
-                                                                        "hle", "kuan_graph"])
+    parser.add_argument("--dataset", type=str, default="gaia", choices=[
+        "gaia",
+        "browsecomp_zh", "browsecomp_zh_small",
+        "browsecomp_en", "browsecomp_en_full", "browsecomp_en_small",
+        "webwalker",
+        "simple_qa", "simple_qa_small",
+        "time_qa",
+        "xbench-deepsearch",
+        "hle", "kuan_graph",
+        "sahibinden",
+    ])
     parser.add_argument("--temperature", type=float, default=0.6)
     parser.add_argument("--top_p", type=float, default=0.95)
     parser.add_argument("--max_workers", type=int, default=20)
