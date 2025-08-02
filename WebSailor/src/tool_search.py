@@ -28,7 +28,7 @@ class Search(BaseTool):
     }
 
     def google_search(self, query: str):
-        url = 'https://google.serper.dev/search'
+        url = SEARCH_API_URL or 'https://google.serper.dev/search'
         headers = {
             'X-API-KEY': GOOGLE_SEARCH_KEY,
             'Content-Type': 'application/json',
