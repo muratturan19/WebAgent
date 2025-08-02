@@ -1,0 +1,1 @@
+Bu repo içinde bir Agents.md yok. Sürekli bunu aramaktan vazgeç lütfen :):)
