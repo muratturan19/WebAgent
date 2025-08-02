@@ -10,8 +10,9 @@ import random
 
 
 WEBCONTENT_MAXLENGTH = int(os.getenv("WEBCONTENT_MAXLENGTH", 150000))
+# If set to true, the agent will fetch webpages directly instead of using
+# the Jina reading service.
 IGNORE_JINA = os.getenv("IGNORE_JINA", "false").lower() == "true"
-# Visit Tool (Using Jina Reader)
 JINA_READER_URL_PREFIX = "https://r.jina.ai/"
 
 JINA_API_KEYS = os.getenv("JINA_API_KEYS")
@@ -135,10 +136,26 @@ class Visit(BaseTool):
                 
         return "[visit] Failed to read page."
 
+    def direct_readpage(self, url: str) -> str:
+        """Fetch webpage content directly without using Jina."""
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/114.0 Safari/537.36"
+            )
+        }
+        try:
+            resp = requests.get(url, headers=headers, timeout=10)
+            if resp.status_code == 200:
+                return resp.text
+        except Exception:
+            pass
+        return "[visit] Failed to read page."
+
 
     def readpage(self, url: str, goal: str) -> str:
         """
-        Attempt to read webpage content by alternating between jina and aidata services.
+        Read webpage content and summarize useful information.
         
         Args:
             url: The URL to read
@@ -149,9 +166,13 @@ class Visit(BaseTool):
         """
         max_attempts = 10
         for attempt in range(max_attempts):
-            # Alternate between jina and aidata
-            content = self.jina_readpage(url)
-            sevice = "jina"
+            # Decide which service to use for fetching webpage content
+            if IGNORE_JINA:
+                content = self.direct_readpage(url)
+                sevice = "direct"
+            else:
+                content = self.jina_readpage(url)
+                sevice = "jina"
 
             # Check if we got valid content
             print(sevice)
