@@ -24,16 +24,29 @@ class Search(BaseTool):
         "required": ["query"],
     }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Use a session to persist cookies and avoid 403 errors
+        self.session = requests.Session()
+        self.session.headers.update(
+            {
+                "User-Agent": (
+                    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                    "(KHTML, like Gecko) Chrome/120.0 Safari/537.36"
+                ),
+                # Provide common headers to mimic a real browser request
+                "Accept": (
+                    "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8"
+                ),
+                "Accept-Language": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7",
+                "Referer": "https://www.sahibinden.com/",
+            }
+        )
+
     def _search_once(self, query: str):
-        headers = {
-            "User-Agent": (
-                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-                "(KHTML, like Gecko) Chrome/120.0 Safari/537.36"
-            )
-        }
         url = f"https://www.sahibinden.com/arama?query_text={quote_plus(query)}"
         try:
-            resp = requests.get(url, headers=headers, timeout=10)
+            resp = self.session.get(url, timeout=10)
             resp.raise_for_status()
         except Exception as e:
             return {"sorgu": query, "hata": str(e)}

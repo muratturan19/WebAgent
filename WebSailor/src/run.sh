@@ -1,4 +1,13 @@
 ##############Evaluation Parameters################
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+if [ -f "$ROOT_DIR/.env" ]; then
+    set -a
+    source "$ROOT_DIR/.env"
+    set +a
+fi
+
 export MODEL_PATH=$1 # Model path
 
 # Dataset names (strictly match the following names):
@@ -6,7 +15,8 @@ export MODEL_PATH=$1 # Model path
 # - browsecomp_zh (Full set, 289 Cases)
 # - browsecomp_en (Full set, 1266 Cases)
 # - xbench-deepsearch
-export DATASET=$2 
+# - sahibinden
+export DATASET=$2
 export OUTPUT_PATH=$3 # Output path for prediction results
 
 export TEMPERATURE=0.6 # LLM generation parameter, fixed at 0.6

@@ -1,11 +1,16 @@
-export JINA_KEY="your_jina_key"
-export SEARCH_API_URL="your_search_api_url"
-export GOOGLE_SEARCH_KEY="your_google_search_key"
+#!/bin/bash
 
-export SUMMARY_MODEL_PATH="/path/Qwen2.5-72B-Instruct"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+if [ -f "$ROOT_DIR/.env" ]; then
+    set -a
+    source "$ROOT_DIR/.env"
+    set +a
+fi
+
 export MAX_LENGTH=$((1024 * 31 - 500))
 
-cd src
+cd "$ROOT_DIR/WebSailor/src"
 
 # The arguments are the model path, the dataset name, and the location of the prediction file.
 # bash run.sh <model_path> <dataset> <output_path>
@@ -15,6 +20,7 @@ cd src
 # - browsecomp_zh (Full set, 289 Cases)
 # - browsecomp_en (Full set, 1266 Cases)
 # - xbench-deepsearch
+# - sahibinden
 
 # Directory containing the WebSailor-3B model shards.
 # This folder must include:
@@ -22,5 +28,6 @@ cd src
 #   - model-00002-of-00002.safetensors
 MODEL_PATH="D:/Mira/WebSailor-3B"
 
-# Run evaluation using the local model directory.
-bash run.sh "$MODEL_PATH" gaia output_path
+# Run evaluation using the local model directory for the sahibinden dataset.
+bash run.sh "$MODEL_PATH" sahibinden output_path
+
