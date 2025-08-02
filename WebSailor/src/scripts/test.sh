@@ -12,8 +12,8 @@ export MAX_LENGTH=$((1024 * 31 - 500))
 
 cd "$ROOT_DIR/WebSailor/src"
 
-# The arguments are the model path, the dataset name, and the location of the prediction file.
-# bash run.sh <model_path> <dataset> <output_path>
+# The arguments are the dataset name and the location of the prediction file.
+# bash run.sh <dataset> <output_path>
 
 # Dataset names (strictly match the following names):
 # - gaia
@@ -26,8 +26,8 @@ cd "$ROOT_DIR/WebSailor/src"
 # This folder must include:
 #   - model-00001-of-00002.safetensors
 #   - model-00002-of-00002.safetensors
-MODEL_PATH="D:/Mira/WebSailor-3B"
+export MODEL_PATH=${MODEL_PATH:-/models}
 
 # Run evaluation using the local model directory for the sahibinden dataset.
-bash run.sh "$MODEL_PATH" sahibinden output_path
+bash run.sh sahibinden output_path
 

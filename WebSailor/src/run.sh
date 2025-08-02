@@ -1,4 +1,5 @@
 ##############Evaluation Parameters################
+# Usage: bash run.sh <dataset> <output_path>
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
@@ -8,7 +9,7 @@ if [ -f "$ROOT_DIR/.env" ]; then
     set +a
 fi
 
-export MODEL_PATH=$1 # Model path
+export MODEL_PATH=${MODEL_PATH:-/models} # Model path inside the container
 
 # Dataset names (strictly match the following names):
 # - gaia
@@ -16,8 +17,8 @@ export MODEL_PATH=$1 # Model path
 # - browsecomp_en (Full set, 1266 Cases)
 # - xbench-deepsearch
 # - sahibinden
-export DATASET=$2
-export OUTPUT_PATH=$3 # Output path for prediction results
+export DATASET=$1
+export OUTPUT_PATH=$2 # Output path for prediction results
 
 export TEMPERATURE=0.6 # LLM generation parameter, fixed at 0.6
 
