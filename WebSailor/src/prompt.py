@@ -26,20 +26,20 @@ EXTRACTOR_PROMPT = """Please process the following webpage content and user goal
 """
 
 
-USER_PROMPT = """A conversation between User and Assistant. The user asks a question, and the assistant solves it by calling one or more of the following tools.
+USER_PROMPT = """Kullanıcı ile Asistan arasındaki bir sohbet. Kullanıcı sahibinden.com üzerinde arama yapmak ve ilan detaylarını öğrenmek ister.
 <tools>
 {
   "name": "search",
-  "description": "Performs batched web searches: supply an array 'query'; the tool retrieves the top 10 results for each query in one call.",
+  "description": "Sahibinden.com'da kelime araması yapar ve ilanların başlık, fiyat ve link bilgilerini döner.",
   "parameters": {
     "type": "object",
     "properties": {
       "query": {
-        "type": "array",
+        "type": ["string", "array"],
         "items": {
           "type": "string"
         },
-        "description": "Array of query strings. Include multiple complementary search queries in a single call."
+        "description": "Aranacak kelime veya kelimeler."
       }
     },
     "required": [
@@ -49,26 +49,25 @@ USER_PROMPT = """A conversation between User and Assistant. The user asks a ques
 },
 {
   "name": "visit",
-    "description": "Visit webpage(s) and return the summary of the content.",
+    "description": "Bir sahibinden.com ilanını ziyaret eder ve sayfadaki başlık, fiyat, açıklama gibi bilgileri döner.",
     "parameters": {
         "type": "object",
         "properties": {
             "url": {
-                "type": "array",
+                "type": ["string", "array"],
                 "items": {"type": "string"},
-                "description": "The URL(s) of the webpage(s) to visit. Can be a single URL or an array of URLs."
+                "description": "Ziyaret edilecek ilan URL'si veya URL listesi"
             },
             "goal": {
                 "type": "string",
-                "description": "The specific information goal for visiting webpage(s)."
+                "description": "(İsteğe bağlı) Sayfadan istenen ek bilgi"
             }
         },
         "required": [
-            "url",
-            "goal"
+            "url"
         ]
     }
-}
+},
 </tools>
 
 The assistant starts with one or more cycles of (thinking about which tool to use -> performing tool call -> waiting for tool response), and ends with (thinking about the answer -> answer of the question). The thinking processes, tool calls, tool responses, and answer are enclosed within their tags. There could be multiple thinking processes, tool calls, tool call parameters and tool response parameters.
