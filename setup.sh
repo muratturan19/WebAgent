@@ -6,7 +6,7 @@ pip install -r WebSailor/requirements.txt
 
 # 2. (Varsa) Model dosyalarını kontrol et/yükle
 # Örnek: HuggingFace veya lokal model path ayarı
-# export MODEL_PATH="D:/Mira/WebSailor-3B/"
+# export MODEL_PATH="/models"
 # (model zaten indirildiyse bu adımı geçebilirsin)
 
 # 3. (Varsa) Ortam değişkenlerini ayarla
