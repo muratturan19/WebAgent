@@ -1,11 +1,16 @@
 from qwen_agent.tools.base import BaseTool, register_tool
 import json
+import os
 from typing import List, Union
 import requests
 from urllib.parse import quote_plus
 from bs4 import BeautifulSoup
 import time
 import undetected_chromedriver as uc
+from dotenv import load_dotenv
+
+from tool_auth import SahibindenAuth
+from tool_captcha import handle_captcha_ui, detect_captcha
 
 
 
@@ -29,6 +34,7 @@ class Search(BaseTool):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        load_dotenv()
         self.session = requests.Session()
         self.session.headers.update(
             {
@@ -42,23 +48,45 @@ class Search(BaseTool):
                 "Sec-Fetch-Site": "none",
             }
         )
+        self._load_cookies()
+
+    def _load_cookies(self, refresh: bool = False) -> None:
+        cookies = None
+        if not refresh and os.path.exists("session_cookies.json"):
+            try:
+                with open("session_cookies.json", "r", encoding="utf-8") as f:
+                    cookies = json.load(f)
+            except Exception:
+                cookies = None
+        if cookies is None:
+            auth = SahibindenAuth()
+            cookie_str = auth.call({})
+            try:
+                cookies = json.loads(cookie_str)
+            except Exception:
+                cookies = []
+        for c in cookies:
+            self.session.cookies.set(c.get("name"), c.get("value"))
 
     def _search_once(self, query: str):
         url = f"https://www.sahibinden.com/arama?query_text={quote_plus(query)}"
         try:
             resp = self.session.get(url, timeout=10)
+            if "giris" in resp.url:
+                self._load_cookies(refresh=True)
+                resp = self.session.get(url, timeout=10)
             resp.raise_for_status()
             soup = BeautifulSoup(resp.text, "html.parser")
             items = self._parse_soup(soup)
             if not items:
                 items = self._selenium_fetch(url)
             return {"sorgu": query, "sonuclar": items}
-        except Exception:
+        except Exception as e:
             try:
                 items = self._selenium_fetch(url)
                 return {"sorgu": query, "sonuclar": items}
             except Exception as e2:
-                return {"error": str(e2)}
+                return {"error": f"arama basarisiz: {e2}"}
         finally:
             time.sleep(3)
 
@@ -80,7 +108,16 @@ class Search(BaseTool):
         options.headless = True
         driver = uc.Chrome(options=options)
         try:
+            driver.get("https://www.sahibinden.com")
+            for c in self.session.cookies:
+                driver.add_cookie({"name": c.name, "value": c.value})
             driver.get(url)
+            if detect_captcha(driver):
+                driver.quit()
+                options.headless = False
+                driver = uc.Chrome(options=options)
+                driver.get(url)
+                handle_captcha_ui(driver, url)
             time.sleep(2)
             soup = BeautifulSoup(driver.page_source, "html.parser")
             return self._parse_soup(soup)

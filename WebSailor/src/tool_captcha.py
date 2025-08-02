@@ -1,66 +1,62 @@
-from qwen_agent.tools.base import BaseTool, register_tool
-import json
-import time
-import requests
+"""Manual CAPTCHA handling utilities.
+
+This module replaces the previous 2Captcha based implementation with a
+user‑friendly manual approach.  When a CAPTCHA is detected the browser is
+shown to the user and execution pauses until the user confirms that the
+challenge is solved.  Optionally, a Streamlit UI can be used to provide
+visual feedback and a confirmation button.
+"""
+
+from __future__ import annotations
+
+import os
+from typing import Optional
 
 
-@register_tool("solve_captcha", allow_overwrite=True)
-class CaptchaSolver(BaseTool):
-    name = "solve_captcha"
-    description = "2Captcha servisini kullanarak reCAPTCHA tokeni alir."
+def detect_captcha(driver) -> bool:
+    """Return ``True`` if the current page looks like a CAPTCHA."""
 
-    parameters = {
-        "type": "object",
-        "properties": {
-            "api_key": {
-                "type": "string",
-                "description": "2Captcha API anahtari",
-            },
-            "site_key": {
-                "type": "string",
-                "description": "reCAPTCHA site key",
-            },
-            "url": {"type": "string", "description": "Captcha sayfa URL"},
-        },
-        "required": ["api_key", "site_key", "url"],
-    }
+    page = driver.page_source.lower()
+    return "captcha" in page or "robot" in page
 
-    def call(self, params: dict, **kwargs) -> str:
-        api_key = params.get("api_key")
-        site_key = params.get("site_key")
-        page_url = params.get("url")
 
-        payload = {
-            "key": api_key,
-            "method": "userrecaptcha",
-            "googlekey": site_key,
-            "pageurl": page_url,
-            "json": 1,
-        }
+def handle_captcha_ui(driver, page_url: Optional[str] = None) -> None:
+    """Interactively resolve a CAPTCHA in the given ``driver``.
 
-        try:
-            resp = requests.post("http://2captcha.com/in.php", data=payload, timeout=10)
-            resp.raise_for_status()
-            data = resp.json()
-            if data.get("status") != 1:
-                return json.dumps(data)
-            request_id = data.get("request")
-            result_params = {
-                "key": api_key,
-                "action": "get",
-                "id": request_id,
-                "json": 1,
-            }
-            for _ in range(20):
-                time.sleep(5)
-                result = requests.get(
-                    "http://2captcha.com/res.php", params=result_params, timeout=10
-                )
-                result.raise_for_status()
-                rj = result.json()
-                if rj.get("status") == 1:
-                    return rj.get("request")
-            return "captcha çözülmedi"
-        except Exception as e:
-            return f"hata: {e}"
+    The browser window is made visible and a screenshot is stored so that a UI
+    framework such as Streamlit can display it.  Execution pauses until the
+    user confirms that the CAPTCHA has been solved.
+    """
+
+    if not detect_captcha(driver):
+        return
+
+    if page_url:
+        driver.get(page_url)
+
+    driver.set_window_position(0, 0)
+    driver.set_window_size(1024, 768)
+
+    screenshot_path = os.path.join(os.getcwd(), "captcha.png")
+    driver.save_screenshot(screenshot_path)
+
+    print("🔐 CAPTCHA detected!")
+    print("📱 Browser açıldı - CAPTCHA'yı manuel çöz")
+    print("✅ Çözdükten sonra bu pencereye dön ve Enter'a bas")
+
+    try:
+        import streamlit as st
+
+        st.warning("CAPTCHA tespit edildi. Lütfen tarayıcıda çözün.")
+        st.image(screenshot_path, caption="CAPTCHA ekran görüntüsü")
+        st.button("CAPTCHA Çözüldü")
+    except Exception:
+        # Streamlit is optional; ignore if not available or not in a Streamlit
+        # context.
+        pass
+
+    input("⏳ CAPTCHA çözüldü mü? (Enter'a bas): ")
+
+    if os.path.exists(screenshot_path):
+        os.remove(screenshot_path)
 
