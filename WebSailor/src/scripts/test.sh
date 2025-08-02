@@ -16,4 +16,11 @@ cd src
 # - browsecomp_en (Full set, 1266 Cases)
 # - xbench-deepsearch
 
-bash run.sh websailor_3b gaia output_path
+# Directory containing the WebSailor-3B model shards.
+# This folder must include:
+#   - model-00001-of-00002.safetensors
+#   - model-00002-of-00002.safetensors
+MODEL_PATH="D:/Mira/WebSailor-3B"
+
+# Run evaluation using the local model directory.
+bash run.sh "$MODEL_PATH" gaia output_path
