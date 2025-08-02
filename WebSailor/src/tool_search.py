@@ -1,102 +1,63 @@
-from qwen_agent.tools.base import BaseTool, register_tool 
+from qwen_agent.tools.base import BaseTool, register_tool
 import json
-from concurrent.futures import ThreadPoolExecutor
 from typing import List, Union
 import requests
-import os
-
-SEARCH_API_URL = os.getenv("SEARCH_API_URL")
-GOOGLE_SEARCH_KEY = os.getenv("GOOGLE_SEARCH_KEY")
+from urllib.parse import quote_plus
+from bs4 import BeautifulSoup
 
 
 @register_tool("search", allow_overwrite=True)
 class Search(BaseTool):
     name = "search"
-    description = "Performs batched web searches: supply an array 'query'; the tool retrieves the top 10 results for each query in one call."
+    description = (
+        "Sahibinden.com'da arama yapar ve sonuçları başlık, fiyat ve link olarak döner."
+    )
     parameters = {
-            "type": "object",
-            "properties": {
-                "query": {
-                    "type": "array",
-                    "items": {
-                    "type": "string"
-                    },
-                    "description": "Array of query strings. Include multiple complementary search queries in a single call."
-                },
-            },
+        "type": "object",
+        "properties": {
+            "query": {
+                "type": ["string", "array"],
+                "items": {"type": "string"},
+                "description": "Arama yapılacak kelime veya kelimeler.",
+            }
+        },
         "required": ["query"],
     }
 
-    def google_search(self, query: str):
-        url = SEARCH_API_URL or 'https://google.serper.dev/search'
+    def _search_once(self, query: str):
         headers = {
-            'X-API-KEY': GOOGLE_SEARCH_KEY,
-            'Content-Type': 'application/json',
+            "User-Agent": (
+                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/120.0 Safari/537.36"
+            )
         }
-        data = {
-            "q": query,
-            "num": 10,
-            "extendParams": {
-                "country": "en",
-                "page": 1,
-            },
-        }
-
-        for i in range(5):
-            try:
-                response = requests.post(url, headers=headers, data=json.dumps(data))
-                results = response.json()
-            except Exception as e:
-                print(e)
-                if i == 4:
-                    return f"Google search Timeout, return None, Please try again later."
-        if response.status_code != 200:
-            raise Exception(f"Error: {response.status_code} - {response.text}")
-
+        url = f"https://www.sahibinden.com/arama?query_text={quote_plus(query)}"
         try:
-            if "organic" not in results:
-                raise Exception(f"No results found for query: '{query}'. Use a less specific query.")
+            resp = requests.get(url, headers=headers, timeout=10)
+            resp.raise_for_status()
+        except Exception as e:
+            return {"sorgu": query, "hata": str(e)}
 
-            web_snippets = list()
-            idx = 0
-            if "organic" in results:
-                for page in results["organic"]:
-                    idx += 1
-                    date_published = ""
-                    if "date" in page:
-                        date_published = "\nDate published: " + page["date"]
-
-                    source = ""
-                    if "source" in page:
-                        source = "\nSource: " + page["source"]
-
-                    snippet = ""
-                    if "snippet" in page:
-                        snippet = "\n" + page["snippet"]
-
-                    redacted_version = f"{idx}. [{page['title']}]({page['link']}){date_published}{source}\n{snippet}"
-
-                    redacted_version = redacted_version.replace("Your browser can't play this video.", "")
-                    web_snippets.append(redacted_version)
-
-            content = f"A Google search for '{query}' found {len(web_snippets)} results:\n\n## Web Results\n" + "\n\n".join(web_snippets)
-            return content
-        except:
-            return f"No results found for '{query}'. Try with a more general query, or remove the year filter."
-
+        soup = BeautifulSoup(resp.text, "html.parser")
+        items = []
+        for row in soup.select("tr.searchResultsItem")[:10]:
+            title_elem = row.select_one("td.searchResultsTitleValue a")
+            price_elem = row.select_one("td.searchResultsPriceValue")
+            if not title_elem or not price_elem:
+                continue
+            title = title_elem.get_text(strip=True)
+            price = price_elem.get_text(" ", strip=True)
+            link = "https://www.sahibinden.com" + title_elem.get("href", "")
+            items.append({"baslik": title, "fiyat": price, "link": link})
+        return {"sorgu": query, "sonuclar": items}
 
     def call(self, params: Union[str, dict], **kwargs) -> str:
-        assert GOOGLE_SEARCH_KEY is not None, "Please set the GOOGLE_SEARCH_KEY environment variable."
         try:
             query = params["query"]
-        except:
-            return "[Search] Invalid request format: Input must be a JSON object containing 'query' field"
-        
-        if isinstance(query, str):
-            response = self.google_search(query)
-        else:
-            assert isinstance(query, List)
-            with ThreadPoolExecutor(max_workers=3) as executor:
-                response = list(executor.map(self.google_search, query))
-            response = "\n=======\n".join(response)
-        return response
+        except Exception:
+            return "[search] 'query' alanı eksik"
+
+        queries = query if isinstance(query, list) else [query]
+        results = [self._search_once(q) for q in queries]
+        return json.dumps(results if len(results) > 1 else results[0], ensure_ascii=False)
+
