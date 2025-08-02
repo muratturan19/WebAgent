@@ -5,6 +5,8 @@ import requests
 from urllib.parse import quote_plus
 from bs4 import BeautifulSoup
 import time
+import undetected_chromedriver as uc
+
 
 
 @register_tool("search", allow_overwrite=True)
@@ -47,21 +49,43 @@ class Search(BaseTool):
             resp = self.session.get(url, timeout=10)
             resp.raise_for_status()
             soup = BeautifulSoup(resp.text, "html.parser")
-            items = []
-            for row in soup.select("tr.searchResultsItem")[:10]:
-                title_elem = row.select_one("td.searchResultsTitleValue a")
-                price_elem = row.select_one("td.searchResultsPriceValue")
-                if not title_elem or not price_elem:
-                    continue
-                title = title_elem.get_text(strip=True)
-                price = price_elem.get_text(" ", strip=True)
-                link = "https://www.sahibinden.com" + title_elem.get("href", "")
-                items.append({"baslik": title, "fiyat": price, "link": link})
+            items = self._parse_soup(soup)
+            if not items:
+                items = self._selenium_fetch(url)
             return {"sorgu": query, "sonuclar": items}
-        except Exception as e:
-            return {"error": str(e)}
+        except Exception:
+            try:
+                items = self._selenium_fetch(url)
+                return {"sorgu": query, "sonuclar": items}
+            except Exception as e2:
+                return {"error": str(e2)}
         finally:
             time.sleep(3)
+
+    def _parse_soup(self, soup: BeautifulSoup):
+        items = []
+        for row in soup.select("tr.searchResultsItem")[:10]:
+            title_elem = row.select_one("td.searchResultsTitleValue a")
+            price_elem = row.select_one("td.searchResultsPriceValue")
+            if not title_elem or not price_elem:
+                continue
+            title = title_elem.get_text(strip=True)
+            price = price_elem.get_text(" ", strip=True)
+            link = "https://www.sahibinden.com" + title_elem.get("href", "")
+            items.append({"baslik": title, "fiyat": price, "link": link})
+        return items
+
+    def _selenium_fetch(self, url: str):
+        options = uc.ChromeOptions()
+        options.headless = True
+        driver = uc.Chrome(options=options)
+        try:
+            driver.get(url)
+            time.sleep(2)
+            soup = BeautifulSoup(driver.page_source, "html.parser")
+            return self._parse_soup(soup)
+        finally:
+            driver.quit()
 
     def call(self, params: Union[str, dict], **kwargs) -> str:
         try:
