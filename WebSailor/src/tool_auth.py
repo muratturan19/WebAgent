@@ -37,22 +37,33 @@ class SahibindenAuth(BaseTool):
         options.headless = True
         driver = uc.Chrome(options=options)
         try:
-            driver.get("https://www.sahibinden.com/giris")
+            login_url = f"{os.getenv('SAHIBINDEN_BASE_URL', 'https://www.sahibinden.com')}/giris"
+            driver.get(login_url)
             time.sleep(2)
-            driver.find_element(By.ID, "username").send_keys(username)
-            driver.find_element(By.ID, "password").send_keys(password)
-            driver.find_element(By.ID, "password").submit()
+
+            email_selector = 'input[type="email"], input[placeholder*="posta"], #email'
+            password_selector = 'input[type="password"], #password'
+            login_button_xpath = (
+                "//button[contains(text(), 'E-posta ile giriş yap')] | "
+                "//input[contains(@value, 'giriş')]"
+            )
+
+            driver.find_element(By.CSS_SELECTOR, email_selector).send_keys(username)
+            driver.find_element(By.CSS_SELECTOR, password_selector).send_keys(password)
+            time.sleep(2)
+            driver.find_element(By.XPATH, login_button_xpath).click()
             time.sleep(3)
 
             if detect_captcha(driver):
                 driver.quit()
                 options.headless = False
                 driver = uc.Chrome(options=options)
-                driver.get("https://www.sahibinden.com/giris")
+                driver.get(login_url)
                 time.sleep(2)
-                driver.find_element(By.ID, "username").send_keys(username)
-                driver.find_element(By.ID, "password").send_keys(password)
-                driver.find_element(By.ID, "password").submit()
+                driver.find_element(By.CSS_SELECTOR, email_selector).send_keys(username)
+                driver.find_element(By.CSS_SELECTOR, password_selector).send_keys(password)
+                time.sleep(2)
+                driver.find_element(By.XPATH, login_button_xpath).click()
                 handle_captcha_ui(driver, driver.current_url)
                 time.sleep(3)
 
