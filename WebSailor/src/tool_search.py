@@ -1,16 +1,18 @@
 from qwen_agent.tools.base import BaseTool, register_tool
 import json
 import os
-from typing import List, Union
+from typing import Union
 import requests
 from urllib.parse import quote_plus
 from bs4 import BeautifulSoup
 import time
 import undetected_chromedriver as uc
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 
 from tool_auth import SahibindenAuth
 from tool_captcha import handle_captcha_ui, detect_captcha
+
+SESSION_FILE = os.path.join(os.path.dirname(__file__), "session_cookies.json")
 
 
 
@@ -34,7 +36,7 @@ class Search(BaseTool):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        load_dotenv()
+        load_dotenv(find_dotenv())
         self.session = requests.Session()
         self.session.headers.update(
             {
@@ -52,9 +54,9 @@ class Search(BaseTool):
 
     def _load_cookies(self, refresh: bool = False) -> None:
         cookies = None
-        if not refresh and os.path.exists("session_cookies.json"):
+        if not refresh and os.path.exists(SESSION_FILE):
             try:
-                with open("session_cookies.json", "r", encoding="utf-8") as f:
+                with open(SESSION_FILE, "r", encoding="utf-8") as f:
                     cookies = json.load(f)
             except Exception:
                 cookies = None

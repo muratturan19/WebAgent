@@ -4,9 +4,11 @@ import undetected_chromedriver as uc
 import json
 import os
 import time
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 
 from tool_captcha import handle_captcha_ui, detect_captcha
+
+SESSION_FILE = os.path.join(os.path.dirname(__file__), "session_cookies.json")
 
 
 @register_tool("login", allow_overwrite=True)
@@ -18,10 +20,15 @@ class SahibindenAuth(BaseTool):
     # required for this tool.
     parameters = {"type": "object", "properties": {}, "required": []}
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        load_dotenv(find_dotenv())
+        self.username = os.getenv("SAHIBINDEN_EMAIL")
+        self.password = os.getenv("SAHIBINDEN_PASSWORD")
+
     def call(self, params: dict, **kwargs) -> str:
-        load_dotenv()
-        username = os.getenv("SAHIBINDEN_EMAIL")
-        password = os.getenv("SAHIBINDEN_PASSWORD")
+        username = self.username
+        password = self.password
 
         if not username or not password:
             return "giris basarisiz: kredensiyeller bulunamadi"
@@ -50,7 +57,7 @@ class SahibindenAuth(BaseTool):
                 time.sleep(3)
 
             cookies = driver.get_cookies()
-            with open("session_cookies.json", "w", encoding="utf-8") as f:
+            with open(SESSION_FILE, "w", encoding="utf-8") as f:
                 json.dump(cookies, f, ensure_ascii=False)
             return json.dumps(cookies, ensure_ascii=False)
         except Exception as e:
