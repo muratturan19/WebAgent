@@ -126,6 +126,35 @@ class Search(BaseTool):
         finally:
             driver.quit()
 
+    async def navigate_to_category(self, page, category_path):
+        try:
+            await page.goto("https://www.sahibinden.com")
+            await page.wait_for_load_state('networkidle')
+
+            category_map = {
+                'emlak': 'a:has-text("Emlak")',
+                'konut': 'a:has-text("Konut")',
+                'is_yeri': 'a:has-text("İş Yeri")',
+                'arsa': 'a:has-text("Arsa")',
+                'vasita': 'a:has-text("Vasıta")',
+                'otomobil': 'a:has-text("Otomobil")'
+            }
+
+            for category in category_path:
+                if category.lower() in category_map:
+                    selector = category_map[category.lower()]
+                    await page.click(selector)
+                    await page.wait_for_load_state('networkidle')
+
+            return True, "Navigation successful"
+
+        except Exception as e:
+            return False, f"Navigation failed: {e}"
+
+    async def search_with_filters(self, page, parsed):
+        query = " ".join(parsed.get('keywords', [])) if isinstance(parsed.get('keywords'), list) else parsed.get('keywords', '')
+        return self._search_once(query)
+
     def call(self, params: Union[str, dict], **kwargs) -> str:
         try:
             query = params["query"]
